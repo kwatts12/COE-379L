@@ -1,0 +1,9 @@
+My model can be deployed by cloning my repo and simply running “docker compose up” from the same level as my docker-compose.yml file. The model will be served at port 5000, 
+and once deployed, a model summary can be retrieved using the GET /summary endpoint, and inference can be run using the POST /inference endpoint. The inference server will respond to 
+POST requests with a JSON object that says either { “prediction”: “damage”} or { “prediction”: “no_damage”}. The GET endpoint can be tested using “curl http://127.0.0.1:5000/summary” 
+and the POST endpoint can be tested using “curl -s -X POST http://localhost:5000/inference  -F “image=@$(pwd)/path_to_the_image_from_pwd.jpeg”. Additionally, POSTs to the server can be 
+made from python using a command along the lines of rsp = requests.post(“http://172.17.0.1:5000/inference”, files=data), where data = {"image": open(path, 'rb')}, and GET requests can be 
+made using rsp = requests.post(“http://172.17.0.1:5000/summary”). Note: when I first tried to run start_grader.sh, I received an “invalid file reference format” error. I was able to fix 
+this by changing the command from “docker run -it --rm -v $(pwd)/data:/data -v $(pwd)/grader.py:/grader.py -v $(pwd)/project3-results:/results  --entrypoint=python  kmw4568/ml-satellite-api 
+/grader.py” to “docker run -it --rm -v "$(pwd)/data:/data" -v "$(pwd)/grader.py:/grader.py" -v "$(pwd)/project3-results:/results"  --entrypoint=python  kmw4568/ml-satellite-api /grader.py”. 
+A similar adjustment may need to be made on the graders side in order to get my server to run.

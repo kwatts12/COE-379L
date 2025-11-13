@@ -1,0 +1,89 @@
+[1] Tool: ChatGPT
+    Prompt: I have a jpg imagepath. how can I go from this to a python data structure that I can ultimately feed into a neural network
+    Response: 
+        import tensorflow as tf
+    
+        img = tf.io.read_file(image_path)
+        img = tf.image.decode_jpeg(img, channels=3)
+
+[2] Tool: ChatGPT
+    Prompt: I made my datasets using: img = tf.io.read_file(path) img = tf.image.decode_jpeg(img, channels=3) damagedImages.append(img), how can I take data from              my two tensorflow object arrays corresponding to their labels and combine them into one labelled dataset
+    Response:
+        import tensorflow as tf
+        
+        # Convert the Python lists into TensorFlow datasets
+        damaged_ds = tf.data.Dataset.from_tensor_slices(damagedImages)
+        undamaged_ds = tf.data.Dataset.from_tensor_slices(undamagedImages)
+        
+        # Label them: 1 for damaged, 0 for undamaged
+        damaged_ds = damaged_ds.map(lambda x: (x, 1))
+        undamaged_ds = undamaged_ds.map(lambda x: (x, 0))
+
+[3] Tool: ChatGPT
+    Prompt: once I have my tf Dataset object, how can I normalize the images
+    Response: 
+        def normalize_img(image, label):
+        image = tf.cast(image, tf.float32) / 255.0  # convert to float & scale
+        return image, label
+    
+        dataset = dataset.map(normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+
+[4] Tool: ChatGPT
+    Prompt: when you train a model with a certain number of epochs, is the best model kept or is the last model kept?
+    Response:
+        from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+
+        checkpoint_cb = ModelCheckpoint(
+            'best_model.keras',          # filename to save weights
+            monitor='val_loss',          # or 'val_accuracy', 'val_auc', etc.
+            save_best_only=True,         # only save when performance improves
+            mode='min',                  # 'min' for loss, 'max' for accuracy
+            verbose=1
+        )
+        
+        # Optional: stop training early when no improvement
+        earlystop_cb = EarlyStopping(
+            monitor='val_loss',
+            patience=3,
+            restore_best_weights=True,   # automatically revert to best epoch
+            verbose=1
+        )
+        
+        history = model.fit(
+            trainSet,
+            validation_data=valSet,
+            epochs=20,
+            callbacks=[checkpoint_cb, earlystop_cb]
+        )
+
+[5] Tool: ChatGPT
+    Prompt: can I pass a binary image file to this code: image = tf.data.Dataset.from_tensors(image) image = image.map(lambda x: tf.image.convert_image_dtype(x,             tf.float32)) image = image.batch(1) return image
+    Response:
+        def prepare_image(file_bytes):
+            # Decode JPEG/PNG bytes → tensor (H, W, C)
+            file_bytes = open("example.jpg", "rb").read()
+            # Decode the image bytes → (H,W,3) uint8
+            img = tf.io.decode_image(b, channels=3, expand_animations=False)
+            # Optional: resize to your model’s input
+            img = tf.image.resize(img, [128, 128])
+            # Normalize to [0,1] float32
+            img = tf.image.convert_image_dtype(img, tf.float32)
+            # Add batch dim (1, H, W, C)
+            x = tf.data.Dataset.from_tensors(img).batch(1)
+            return x
+
+[6] Tool: ChatGPT
+    Prompt: I have pushed a docker image to dockerhub. Lets go over the purpose and structure of a docker compose file
+    Response:
+        version: "3.9"
+
+        services:
+          <service-name>:
+            image: <dockerhub-user>/<repo>:<tag>
+            ports:
+              - "<host-port>:<container-port>"
+            environment:
+              KEY: value
+            volumes:
+              - "<host path>:<container path>"
+            restart: unless-stopped

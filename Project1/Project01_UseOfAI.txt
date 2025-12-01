@@ -1,0 +1,49 @@
+[1] Tool: ChatGPT
+    Prompt: how can I convert a column of dates in the form of mm/dd/yy to timestamps
+    Output: df["dates"] = pd.to_datetime(df["dates"], format="%m/%d/%y")
+
+[2] Tool: ChatGPT
+    Prompt: how do I use if statements in a lambda inline function
+    Output: lambda x: <value_if_true> if <condition> else <value_if_false>
+
+[3] Tool: ChatGPT
+    Prompt: how can I get the unique colors in a column of color combinations notated with the form [Yellow, Black] for each row
+    Output: unique_colors = set(color for row in df["colors_list"] for color in row)
+
+[4] Tool: ChatGPT
+    Prompt: I want to sort values of the feature column, Days Alive, into 4 bins each with distinct value ranges. Then within each bin, I want to determine the              ratio of samples that were adopted vs transfered. Finally, I want to graph this as a bar chart with a bar for each bin, where each bar is split into             two colors, where the area of each color represents the ratio of how many samples in that bin were adopted vs transferred. How can I do this?
+    Output: edges = [0, 10, 20, 30, np.inf]
+            df["bin"] = pd.cut(df["feature"], bins=edges, right=True)
+
+            counts = pd.crosstab(df["bin"], df["Target"]).reindex(columns=["target_1","target_2"], fill_value=0)
+            ratios = counts.div(counts.sum(axis=1), axis=0)
+
+            print("Counts per bin:\n", counts)
+            print("\nRatios per bin:\n", ratios)
+
+            ax = ratios.plot(kind="bar", stacked=True)
+            ax.set_title("Feature vs Target ratio by bin")
+            ax.set_xlabel("bins")
+            ax.set_ylabel("Ratio within bin")
+            ax.legend(title="Target", loc="upper right")
+
+[5] Tool: ChatGPT
+    Prompt: Adapt the previous code for the case where I have 3 true/false feature columns whose binary combinations indicate that the datapoint belongs to one              of 4 categories. Instead of sorting the data into bins, how can I simply graph the data by category
+    Output: df["Category"] = np.select(
+            [df["category_1"], df["category_2"], df["category_3"]],
+            ["category_1", "category_2", "category_3"],
+            default="Other"
+            )
+            counts = (
+            pd.crosstab(df_plot["Category"], df_plot["Outcome"])
+            .reindex(columns=["target_1", "target_2"], fill_value=0)
+            .reindex(index=["category_1", "category_2", "category_3","Other"], fill_value=0)  # enforce order
+            )
+            ratios = counts.div(counts.sum(axis=1), axis=0)
+
+[6] Tool: ChatGPT
+    Prompt: now I want to do this but with too many feature columns than I can list. They all start with the string "color_" however. Is there a way to grab all             of these feature columns at once and plug them into the code?
+    Output: conds = [df[c].astype(bool).to_numpy() for c in color_cols]
+            choices = [c.replace("color_", "").title() for c in color_cols]
+
+            df["Color"] = np.select(conds, choices, default="None")

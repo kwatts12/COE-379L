@@ -1,0 +1,84 @@
+[1] Tool: ChatGPT
+    Prompt: Write an AUM loss function for me using tensorflow
+    Response:
+            def loss_fn(y_true, y_pred):
+        y_true = tf.cast(tf.reshape(y_true, [-1]), tf.float32)   # shape (B,)
+        y_pred = tf.cast(tf.reshape(y_pred, [-1]), tf.float32)   # shape (B,)
+
+        # masks for positives and negatives
+        pos_mask = tf.equal(y_true, 1.0)
+        neg_mask = tf.equal(y_true, 0.0)
+
+        pos_scores = tf.boolean_mask(y_pred, pos_mask)   # (#pos,)
+        neg_scores = tf.boolean_mask(y_pred, neg_mask)   # (#neg,)
+
+        # If a batch has no pos or no neg, return zero loss
+        if_pos_or_neg_missing = tf.logical_or(
+            tf.equal(tf.size(pos_scores), 0),
+            tf.equal(tf.size(neg_scores), 0)
+        )
+        def zero_loss():
+            return tf.constant(0.0, dtype=tf.float32)
+
+        def compute_loss():
+            # Compute pairwise score differences (broadcasting)
+            # shape: (#pos, #neg)
+            diffs = tf.expand_dims(pos_scores, axis=1) - tf.expand_dims(neg_scores, axis=0)
+
+            # hinge: max(0, margin - (pos - neg))
+            violations = margin - diffs
+            losses = tf.nn.relu(violations)
+
+            # average over all pairs
+            return tf.reduce_mean(losses)
+
+        return tf.cond(if_pos_or_neg_missing, zero_loss, compute_loss)
+
+    return loss_fn
+
+[2] Tool: ChatGPT
+    Prompt: write a pairwise hinge multiclass loss function
+    Response:
+        import tensorflow as tf
+
+        def multiclass_pairwise_hinge_loss(margin=1.0):
+            """
+            Multiclass pairwise hinge loss (Crammer–Singer multiclass ranking hinge).
+            
+            Works with:
+              - y_true: integer labels shape (batch,) or (batch,1)
+              - y_pred: logits or probabilities shape (batch, num_classes)
+            
+            Loss:
+              L = mean max(0, margin - (score_true - max(score_other)))
+            """
+            margin = float(margin)
+        
+            def loss_fn(y_true, y_pred):
+                # Flatten labels
+                y_true = tf.cast(tf.reshape(y_true, [-1]), tf.int32)   # shape (B,)
+                
+                # Ensure y_pred is float32
+                y_pred = tf.cast(y_pred, tf.float32)                   # shape (B, C)
+        
+                # Gather the score of the true class for each sample
+                batch_indices = tf.range(tf.shape(y_pred)[0])
+                true_scores = tf.gather_nd(y_pred, tf.stack([batch_indices, y_true], axis=1))
+                true_scores = tf.reshape(true_scores, [-1, 1])          # shape (B, 1)
+        
+                # Mask out the true class to get scores of other classes
+                num_classes = tf.shape(y_pred)[1]
+                one_hot = tf.one_hot(y_true, num_classes)
+                other_scores = y_pred - 1e9 * one_hot   # subtract huge number from true class
+        
+                # Get highest incorrect-class score
+                max_other = tf.reduce_max(other_scores, axis=1, keepdims=True)
+        
+                # hinge: max(0, margin - (true - max_other))
+                violations = margin - (true_scores - max_other)
+                losses = tf.nn.relu(violations)
+        
+                # average over batch
+                return tf.reduce_mean(losses)
+        
+            return loss_fn
